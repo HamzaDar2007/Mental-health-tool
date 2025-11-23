@@ -165,13 +165,15 @@ export class ChatService {
       }
 
       // Generate LLM response
-      const llmResponse = await this.llmService.generateResponse(
-        prompt.userPrompt,
-        prompt.systemPrompt
-      );
+      const messages = [
+        { role: 'system', content: prompt.systemPrompt },
+        { role: 'user', content: prompt.userPrompt }
+      ];
+      
+      const llmResponse = await this.llmService.generateResponse(messages, isSafeMode);
 
       // Sanitize response
-      const sanitizedMessage = this.sanitizeResponse(llmResponse.content);
+      const sanitizedMessage = this.sanitizeResponse(llmResponse);
 
       return {
         message: sanitizedMessage,

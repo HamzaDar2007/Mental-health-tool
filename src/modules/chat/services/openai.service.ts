@@ -1,10 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
-import { LLMProvider, LLMResponse } from './llm.service';
 
 @Injectable()
-export class OpenAIProvider implements LLMProvider {
+export class OpenAIProvider {
   private readonly logger = new Logger(OpenAIProvider.name);
   private readonly apiKey: string;
 
@@ -12,16 +11,13 @@ export class OpenAIProvider implements LLMProvider {
     this.apiKey = this.configService.get('OPENAI_API_KEY') || '';
   }
 
-  async generateResponse(prompt: string, context?: string): Promise<LLMResponse> {
+  async generateResponse(messages: any[], safeMode: boolean = false): Promise<string> {
     try {
       const response = await axios.post(
         'https://api.openai.com/v1/chat/completions',
         {
           model: 'gpt-3.5-turbo',
-          messages: [
-            { role: 'system', content: context || '' },
-            { role: 'user', content: prompt }
-          ],
+          messages,
           max_tokens: 500,
           temperature: 0.7
         },
@@ -33,14 +29,7 @@ export class OpenAIProvider implements LLMProvider {
         }
       );
 
-      return {
-        content: response.data.choices[0].message.content,
-        usage: {
-          promptTokens: response.data.usage.prompt_tokens,
-          completionTokens: response.data.usage.completion_tokens,
-          totalTokens: response.data.usage.total_tokens
-        }
-      };
+      return response.data.choices[0].message.content;
     } catch (error) {
       this.logger.error('OpenAI API error:', error.response?.data || error.message);
       throw new Error('Failed to generate response from OpenAI');

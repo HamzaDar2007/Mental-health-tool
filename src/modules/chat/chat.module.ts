@@ -6,6 +6,7 @@ import { ChatService } from './services/chat.service';
 import { CrisisDetectorService } from './services/crisis-detector.service';
 import { LlmService, GeminiProvider, OpenRouterProvider } from './services/llm.service';
 import { OpenAIProvider } from './services/openai.service';
+import { GroqProvider } from './services/groq.service';
 import { PromptService } from './services/prompt.service';
 import { Message } from './entities/message.entity';
 import { SessionsModule } from '../sessions/sessions.module';
@@ -29,6 +30,7 @@ import { ReviewModule } from '../review/review.module';
     GeminiProvider,
     OpenRouterProvider,
     OpenAIProvider,
+    GroqProvider,
     PromptService
   ],
   exports: [ChatService, CrisisDetectorService]

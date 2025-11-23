@@ -2,6 +2,8 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
 import { OpenAIProvider } from './openai.service';
+import { GroqProvider } from './groq.service';
+import { PromptService } from './prompt.service';
 
 export interface LLMResponse {
   content: string;
@@ -93,31 +95,38 @@ export class OpenRouterProvider implements LLMProvider {
 @Injectable()
 export class LlmService {
   private readonly logger = new Logger(LlmService.name);
-  private provider: LLMProvider;
+  private readonly provider: string;
 
   constructor(
     private configService: ConfigService,
     private geminiProvider: GeminiProvider,
     private openRouterProvider: OpenRouterProvider,
-    private openAIProvider: OpenAIProvider
+    private openAIProvider: OpenAIProvider,
+    private groqProvider: GroqProvider,
+    private promptService: PromptService,
   ) {
-    const providerName = this.configService.get('LLM_PROVIDER', 'openai');
-    if (providerName === 'openai') {
-      this.provider = this.openAIProvider;
-    } else if (providerName === 'openrouter') {
-      this.provider = this.openRouterProvider;
-    } else {
-      this.provider = this.geminiProvider;
-    }
+    this.provider = this.configService.get<string>('LLM_PROVIDER', 'openai');
   }
 
-  async generateResponse(prompt: string, context?: string): Promise<LLMResponse> {
+  async generateResponse(messages: any[], safeMode: boolean = false): Promise<string> {
     const maxRetries = 3;
     let lastError: Error = new Error('Unknown error');
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
-        return await this.provider.generateResponse(prompt, context);
+        switch (this.provider) {
+          case 'openai':
+            return await this.openAIProvider.generateResponse(messages, safeMode);
+          
+          case 'groq':
+            return await this.groqProvider.generateResponse(messages, safeMode);
+          
+          case 'fallback':
+            return this.getFallbackResponse(safeMode);
+          
+          default:
+            return this.getFallbackResponse(safeMode);
+        }
       } catch (error) {
         lastError = error as Error;
         this.logger.warn(`LLM attempt ${attempt} failed: ${error.message}`);
@@ -128,7 +137,23 @@ export class LlmService {
       }
     }
 
-    throw lastError;
+    return this.getFallbackResponse(safeMode);
+  }
+
+  private getFallbackResponse(safeMode: boolean): string {
+    const responses = safeMode ? [
+      "I'm here to listen. Take a deep breath with me - in for 4 counts, hold for 4, out for 4.",
+      "You're not alone in this. Sometimes talking about what's on your mind can help. What's one small thing that usually brings you comfort?",
+      "I understand you're going through something difficult. Would you like to try a simple grounding technique together?",
+      "Your feelings are valid. Let's focus on this moment - can you name 3 things you can see around you right now?"
+    ] : [
+      "I understand you're going through a difficult time. Sometimes it helps to take a few deep breaths. Would you like me to guide you through a simple breathing exercise?",
+      "Thank you for reaching out. It takes courage to ask for support. What's been on your mind lately?",
+      "I'm here to provide support and guidance. Remember, if you're in crisis, please contact emergency services or a crisis helpline immediately.",
+      "I hear that you need someone to talk to. While I can offer support, please consider speaking with a mental health professional for ongoing care."
+    ];
+    
+    return responses[Math.floor(Math.random() * responses.length)];
   }
 
   private delay(ms: number): Promise<void> {
