@@ -52,20 +52,35 @@ export class ReviewService {
   }
 
   async getReviewQueue(status?: ReviewStatus, assignedTo?: string): Promise<HumanReviewQueue[]> {
-    const query = this.reviewQueueRepository.createQueryBuilder('review');
+    // First, let's get all items to debug
+    const allItems = await this.reviewQueueRepository.find();
+    this.logger.log(`Total items in queue: ${allItems.length}`);
+    
+    if (allItems.length === 0) {
+      this.logger.warn('No items found in review queue table');
+      return [];
+    }
 
+    const whereConditions: any = {};
+    
     if (status) {
-      query.andWhere('review.status = :status', { status });
+      whereConditions.status = status;
     }
-
+    
     if (assignedTo) {
-      query.andWhere('review.assignedTo = :assignedTo', { assignedTo });
+      whereConditions.assignedTo = assignedTo;
     }
 
-    return await query
-      .orderBy('review.crisisLevel', 'DESC')
-      .addOrderBy('review.createdAt', 'ASC')
-      .getMany();
+    const filteredItems = await this.reviewQueueRepository.find({
+      where: Object.keys(whereConditions).length > 0 ? whereConditions : undefined,
+      order: {
+        crisisLevel: 'DESC',
+        createdAt: 'ASC'
+      }
+    });
+    
+    this.logger.log(`Filtered items: ${filteredItems.length}`);
+    return filteredItems;
   }
 
   async assignReview(reviewId: string, assignedTo: string): Promise<HumanReviewQueue> {
@@ -141,6 +156,23 @@ export class ReviewService {
     });
 
     await this.auditLogRepository.save(auditLog);
+  }
+
+  async createReviewItem(data: {
+    sessionId: string;
+    messageId?: string;
+    crisisLevel: number;
+    metadata?: Record<string, any>;
+  }): Promise<HumanReviewQueue> {
+    const reviewItem = this.reviewQueueRepository.create({
+      sessionId: data.sessionId,
+      messageId: data.messageId,
+      status: ReviewStatus.PENDING,
+      crisisLevel: data.crisisLevel,
+      metadata: data.metadata
+    });
+
+    return await this.reviewQueueRepository.save(reviewItem);
   }
 
   private mapCrisisLevel(label: string, priority: string): number {

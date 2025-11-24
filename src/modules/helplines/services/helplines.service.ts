@@ -18,7 +18,7 @@ export class HelplinesService {
 
   async findByCountry(getHelplinesDto: GetHelplinesDto): Promise<Helpline[]> {
     const query = this.helplineRepository.createQueryBuilder('helpline')
-      .where('helpline.countryCode = :country', { country: getHelplinesDto.country })
+      .where('helpline.country = :country', { country: getHelplinesDto.country })
       .andWhere('helpline.active = :active', { active: true });
 
     if (getHelplinesDto.region) {
@@ -39,7 +39,7 @@ export class HelplinesService {
 
   async findCrisisHelplines(countryCode: string, region?: string): Promise<Helpline[]> {
     const query = this.helplineRepository.createQueryBuilder('helpline')
-      .where('helpline.countryCode = :countryCode', { countryCode })
+      .where('helpline.country = :countryCode', { countryCode })
       .andWhere('helpline.active = :active', { active: true })
       .andWhere('helpline.type IN (:...types)', { 
         types: [HelplineType.EMERGENCY, HelplineType.SUICIDE] 
@@ -57,7 +57,7 @@ export class HelplinesService {
   async findAll(): Promise<Helpline[]> {
     return await this.helplineRepository.find({
       where: { active: true },
-      order: { countryCode: 'ASC', priority: 'ASC' }
+      order: { country: 'ASC', priority: 'ASC' }
     });
   }
 
@@ -77,7 +77,7 @@ export class HelplinesService {
   async seedDefaultHelplines(): Promise<void> {
     const defaultHelplines = [
       {
-        countryCode: 'US',
+        country: 'US',
         type: HelplineType.SUICIDE,
         description: 'US National Suicide Prevention Lifeline',
         phone: '988',
@@ -85,7 +85,7 @@ export class HelplinesService {
         metadata: { url: 'https://988lifeline.org/', hours: '24/7' }
       },
       {
-        countryCode: 'US',
+        country: 'US',
         type: HelplineType.EMERGENCY,
         description: 'Emergency Services',
         phone: '911',
@@ -93,7 +93,7 @@ export class HelplinesService {
         metadata: { hours: '24/7' }
       },
       {
-        countryCode: 'PK',
+        country: 'PK',
         type: HelplineType.SUICIDE,
         description: 'Pakistan Mental Health Helpline',
         phone: '021-111-222-333',
@@ -101,7 +101,7 @@ export class HelplinesService {
         metadata: { hours: '9-5 Mon-Fri' }
       },
       {
-        countryCode: 'GB',
+        country: 'GB',
         type: HelplineType.SUICIDE,
         description: 'Samaritans',
         phone: '116 123',
@@ -109,7 +109,7 @@ export class HelplinesService {
         metadata: { url: 'https://www.samaritans.org/', hours: '24/7' }
       },
       {
-        countryCode: 'CA',
+        country: 'CA',
         type: HelplineType.SUICIDE,
         description: 'Canada Suicide Prevention Service',
         phone: '1-833-456-4566',
@@ -121,7 +121,7 @@ export class HelplinesService {
     for (const helplineData of defaultHelplines) {
       const existing = await this.helplineRepository.findOne({
         where: { 
-          countryCode: helplineData.countryCode,
+          country: helplineData.country,
           phone: helplineData.phone 
         }
       });

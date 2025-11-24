@@ -15,7 +15,7 @@ export class Helpline {
   id: string;
 
   @Column({ name: 'country_code', length: 2 })
-  countryCode: string;
+  country: string;
 
   @Column({ nullable: true })
   region: string;
